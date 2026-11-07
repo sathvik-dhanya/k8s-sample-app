@@ -11,7 +11,7 @@ This repository contains a simple Flask application, a minimal Dockerfile, and a
 | `helm/python-app/` | Parameterized Helm chart for deploying the app to Kubernetes. |
 | `helm/python-app/Chart.yaml` | Chart metadata (name, version, appVersion). |
 | `helm/python-app/values.yaml` | Default chart values (image, replicas, service, gateway, resources, etc.). |
-| `helm/python-app/values-demo-c.yaml` | Stack specific overrides for demo-c environment. |
+| `helm/python-app/values-staging.yaml` | Stack specific overrides for staging environment for example. |
 | `helm/python-app/values-local-dev.yaml` | Stack specific overrides for local development environment. |
 | `helm/python-app/templates/` | Kubernetes manifest templates rendered by Helm. |
 | `helm/python-app/templates/deployment.yaml` | Kubernetes Deployment manifest. |

@@ -27,7 +27,7 @@ metadata:
 spec:
   refreshInterval: 168h                     # How often the operator reconciles the secret
   secretStoreRef:
-    name: aws-secretsmanager                # The name of ClusterSecretStore (provided by SysOps team)
+    name: aws-secretsmanager                # The name of ClusterSecretStore
     kind: ClusterSecretStore
   target:
     name: my-new-secret                     # The name of the native k8s secret that will be created

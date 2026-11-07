@@ -17,7 +17,7 @@ A typical Helm chart includes:
 
 - `Chart.yaml`: chart metadata (name, version, description, app version).
 - `values.yaml`: default configuration values used by templates.
-- `values-demo-c.yaml`: stack specific overrides for demo-c environment.
+- `values-staging.yaml`: stack specific overrides for staging environment.
 - `values-local-dev.yaml`: stack specific overrides for local development environment.
 - `templates/`: Kubernetes manifest templates rendered by Helm.
 - `.helmignore`: files that should not be included when chart is packaged.
@@ -52,13 +52,12 @@ Main values in `values.yaml`:
 - `probes.readiness.*` and `probes.liveness.*` for liveness and readiness probes
 - `resources`, `nodeSelector`, `tolerations`, `affinity` for pod scheduling and resource management
 
-Values in `values-demo-c.yaml`:
+Values in `values-staging.yaml`:
 
 We are overriding the following in there
 - number of replicas
 - disabling the Gateway API resource
 - updating HTTPRoute resource
-- adding affinity labels to schedule the pods on specific nodes
 
 Values in `values-local-dev.yaml`:
 
