@@ -1,0 +1,35 @@
+# Values file used for local dev environment.
+# Overrides from the default values.yaml file go here.
+# This is just an example, values are not guaranteed to be correct for your environment.
+# To use this overrides file, pass this values file to helm install/upgrade command with the -f/--values option.
+
+replicaCount: 2
+
+# NOTE - The gateway is enabled here to allow the sample app to be deployed in a
+# local Kubernetes cluster with Traefik as the ingress controller.
+# In a production environment, the gateway would typically be disabled and
+# the httpRoute would be configured to use an existing shared gateway.
+# In general, your helm chart should have this only enabled in a local dev values file and not in the defaults.
+gateway:
+  enabled: true
+  name: ""
+  namespace: ""
+  className: traefik
+  annotations: {}
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8000       # The default port on which the Traefik gateway will listen for incoming HTTP traffic.
+      hostname: python-app.local
+
+httpRoute:
+  enabled: true
+  annotations: {}
+  hostnames:
+    - python-app.local
+  parentRefs: []
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /

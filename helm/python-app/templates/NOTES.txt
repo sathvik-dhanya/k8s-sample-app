@@ -1,0 +1,2 @@
+Check the workload status by running these commands:
+kubectl get pods,svc,gateway,httproute
