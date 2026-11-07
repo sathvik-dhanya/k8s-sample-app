@@ -1,0 +1,31 @@
+# Stack specific values file for python-app in demo-c env.
+# Overrides from the default values.yaml file go here.
+# This is just an example, values are not guaranteed to be correct for your environment.
+# To use this overrides file, pass this values file to helm install/upgrade command with the -f/--values option.
+replicaCount: 3
+
+gateway:
+  enabled: false
+
+httpRoute:
+  enabled: true
+  hostnames:
+    - python-app.dev.onshape.com
+  parentRefs:  # SysOps will provide the values for these 2 fields
+    - name: shared-gateway
+      namespace: infra
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+
+affinity: # SysOps will provide you these labels depending on your hardware requirements
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: workload_type
+            operator: In
+            values:
+              - medium
