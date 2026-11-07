@@ -1,7 +1,7 @@
 {{- if .Values.gateway.enabled -}}
 ####
 # NOTE - The Gateway resource is typically created by the OPS team and the
-# values are shared with the dev team. Gateway resource does not live in
+# values are shared with the DEV team. Gateway resource does not live in
 # the app helm chart. It is included here for reference and for the example app to work.
 # Only the HTTPRoute resource should be created by the app helm chart.
 # If you do want to test the app in a local cluster, you can enable the gateway in the
