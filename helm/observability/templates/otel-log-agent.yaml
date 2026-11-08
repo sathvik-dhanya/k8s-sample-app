@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-log-agent
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-log-agent
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets", "deployments", "daemonsets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-log-agent
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-log-agent
+subjects:
+  - kind: ServiceAccount
+    name: otel-log-agent
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-log-agent
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+    app.kubernetes.io/name: otel-log-agent
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-log-agent
+  template:
+    metadata:
+      labels:
+        {{- include "observability.labels" . | nindent 8 }}
+        app.kubernetes.io/name: otel-log-agent
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/otel-log-agent-config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: otel-log-agent
+      tolerations:
+        - operator: Exists
+      securityContext:
+        # Common Kubernetes runtimes require root to read pod log files.
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+        - name: otel-log-agent
+          image: "{{ .Values.otelCollector.image.repository }}:{{ .Values.otelCollector.image.tag }}"
+          imagePullPolicy: {{ .Values.otelCollector.image.pullPolicy }}
+          args: ["--config=/etc/otelcol-contrib/collector.yaml"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml .Values.otelCollector.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol-contrib
+              readOnly: true
+            - name: pod-logs
+              mountPath: /var/log/pods
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: otel-log-agent-config
+        - name: pod-logs
+          hostPath:
+            path: /var/log/pods
+            type: Directory

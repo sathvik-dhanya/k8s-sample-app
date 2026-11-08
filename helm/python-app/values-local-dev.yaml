@@ -5,6 +5,13 @@
 
 replicaCount: 2
 
+telemetry:
+  enabled: true
+
+# Enable the deliberately slow and failing endpoints for dashboard demos.
+simulation:
+  enabled: true
+
 # NOTE - The gateway is enabled here to allow the sample app to be deployed in a
 # local Kubernetes cluster with Traefik as the ingress controller.
 # In a production environment, the gateway would typically be disabled and

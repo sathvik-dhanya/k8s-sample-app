@@ -17,7 +17,6 @@ A typical Helm chart includes:
 
 - `Chart.yaml`: chart metadata (name, version, description, app version).
 - `values.yaml`: default configuration values used by templates.
-- `values-staging.yaml`: stack specific overrides for staging environment.
 - `values-local-dev.yaml`: stack specific overrides for local development environment.
 - `templates/`: Kubernetes manifest templates rendered by Helm.
 - `.helmignore`: files that should not be included when chart is packaged.
@@ -49,15 +48,10 @@ Main values in `values.yaml`:
 - `replicaCount` for the number of replicas
 - `service.port`, `service.targetPort`, `service.type` for the Service configuration
 - `gateway.*` and `httpRoute.*` for Gateway API routing
+- `telemetry.enabled`, `telemetry.serviceName`, `telemetry.endpoint`, and `telemetry.traceSampleRatio` for optional OpenTelemetry export (OTLP/gRPC)
+- `simulation.enabled` to expose local-only slow and deliberate 503 routes for dashboard demonstrations (disabled by default)
 - `probes.readiness.*` and `probes.liveness.*` for liveness and readiness probes
 - `resources`, `nodeSelector`, `tolerations`, `affinity` for pod scheduling and resource management
-
-Values in `values-staging.yaml`:
-
-We are overriding the following in there
-- number of replicas
-- disabling the Gateway API resource
-- updating HTTPRoute resource
 
 Values in `values-local-dev.yaml`:
 
@@ -65,3 +59,21 @@ We are overriding the following in there
 - number of replicas
 - enabling the Gateway API resource
 - enabling HTTPRoute resource
+- enabling OpenTelemetry export to the local observability collector (the app remains available if the collector is unreachable)
+- enabling synthetic latency and failure routes so the observability dashboard can display varied metrics and correlated failure logs
+
+## Run the application in k3d
+
+From the repository root, use `make deploy` to deploy the app and observability charts
+together with OTLP telemetry enabled:
+
+```sh
+make deploy
+```
+
+`make simulate-traffic` sends normal, slow, and deliberate 503 requests to populate
+the dashboard.
+
+`make validate` tests the app, lints both charts, and renders both charts. `make
+uninstall` removes both chart releases and the observability chart's PVCs. The app
+chart can still be managed independently with Helm commands when needed.

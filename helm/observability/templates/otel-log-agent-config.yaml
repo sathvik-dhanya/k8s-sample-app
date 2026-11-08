@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-log-agent-config
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+data:
+  collector.yaml: |
+    receivers:
+      filelog:
+        include:
+          - /var/log/pods/*/*/*.log
+        # Avoid recursively ingesting the log agent's own output.
+        exclude:
+          - /var/log/pods/{{ .Release.Namespace }}_otel-log-agent-*/*/*.log
+        start_at: beginning
+        include_file_path: true
+        operators:
+          - type: container
+            add_metadata_from_filepath: true
+          # Parse JSON lines into attributes; leave non-JSON lines as searchable text.
+          - type: json_parser
+            parse_from: body
+            parse_to: attributes
+            on_error: send
+            if: 'body matches "^\\s*\\{"'
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 192
+      k8sattributes:
+        auth_type: serviceAccount
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.container.name
+            - k8s.deployment.name
+            - k8s.daemonset.name
+            - k8s.statefulset.name
+            - k8s.job.name
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.name
+              - from: resource_attribute
+                name: k8s.namespace.name
+      transform/logs:
+        log_statements:
+          - context: resource
+            statements:
+              - 'set(attributes["service.name"], attributes["k8s.deployment.name"]) where attributes["service.name"] == nil and attributes["k8s.deployment.name"] != nil'
+              - 'set(attributes["service.name"], attributes["k8s.statefulset.name"]) where attributes["service.name"] == nil and attributes["k8s.statefulset.name"] != nil'
+              - 'set(attributes["service.name"], attributes["k8s.daemonset.name"]) where attributes["service.name"] == nil and attributes["k8s.daemonset.name"] != nil'
+              - 'set(attributes["service.name"], attributes["k8s.job.name"]) where attributes["service.name"] == nil and attributes["k8s.job.name"] != nil'
+              - 'set(attributes["service.name"], attributes["k8s.container.name"]) where attributes["service.name"] == nil and attributes["k8s.container.name"] != nil'
+      batch:
+        timeout: 1s
+    exporters:
+      otlphttp/loki:
+        endpoint: http://loki:3100/otlp
+    service:
+      pipelines:
+        logs:
+          receivers: [filelog]
+          processors: [memory_limiter, k8sattributes, transform/logs, batch]
+          exporters: [otlphttp/loki]
+      telemetry:
+        logs:
+          level: warn
