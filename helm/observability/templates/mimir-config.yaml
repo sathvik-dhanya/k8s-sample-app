@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mimir-config
+  labels:
+    {{- include "observability.labels" . | nindent 4 }}
+data:
+  mimir.yaml: |
+    # Multi-tenancy is disabled for this single-user, local-only stack.
+    multitenancy_enabled: false
+    activity_tracker:
+      # The image runs non-root; keep its activity file on the writable data volume.
+      filepath: /data/metrics-activity.log
+    alertmanager:
+      data_dir: /data/alertmanager
+    server:
+      http_listen_port: 9009
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/blocks
+      tsdb:
+        dir: /data/tsdb
+      bucket_store:
+        sync_dir: /data/tsdb-sync
+    compactor:
+      data_dir: /data/compactor
+      sharding_ring:
+        kvstore:
+          store: inmemory
+    distributor:
+      ring:
+        kvstore:
+          store: inmemory
+    ingester:
+      ring:
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+    ruler:
+      rule_path: /data/ruler
+    store_gateway:
+      sharding_ring:
+        kvstore:
+          store: inmemory
+        replication_factor: 1
+    ruler_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/rules
+    limits:
+      ingestion_rate: 10000
+      ingestion_burst_size: 20000
+    usage_stats:
+      enabled: false

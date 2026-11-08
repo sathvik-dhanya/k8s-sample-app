@@ -15,6 +15,17 @@ service:
   port: 80             # The port on which the service will be exposed.
   targetPort: 8080     # The port on which the application container is listening.
 
+telemetry:
+  enabled: false
+  serviceName: python-app
+  # OTLP/gRPC collector address; Make overrides this for a custom namespace.
+  endpoint: otel-collector.observability.svc.cluster.local:4317
+  traceSampleRatio: "1.0"
+
+# Synthetic latency and failure routes are disabled except in local-dev values.
+simulation:
+  enabled: false
+
 # By default, do not enable the gateway and httpRoute resources.
 # These are typically only enabled in a local dev environment
 # where a gateway is needed to route traffic to the application locally.

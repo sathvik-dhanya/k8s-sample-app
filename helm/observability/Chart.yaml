@@ -1,0 +1,6 @@
+apiVersion: v2
+name: observability
+description: Lightweight local Grafana, Loki, Tempo, Mimir, and OpenTelemetry Collector stack
+type: application
+version: 0.1.3
+appVersion: "local"

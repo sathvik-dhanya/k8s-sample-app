@@ -1,87 +1,81 @@
 # Makefile Guide
 
-This document contains all `Makefile`-specific instructions for this repository.
+The Makefile provides a compact local Kubernetes workflow for the Python app and
+the independently deployable LGTM observability stack. `make deploy` always enables
+OpenTelemetry for the app and deploys both Helm charts.
 
-## File and purpose
+## Prerequisites
 
-- `Makefile`: automation for local app workflows, Docker image workflows, k3d cluster workflows, and Helm deploy workflows.
+For deployment, install Docker, `k3d`, `kubectl`, Helm, Python 3, and Make. Tests and
+chart validation do not require a Kubernetes cluster.
 
-## Quick start
+## Main targets
 
-```bash
-(Checkout to repository)
-make help
-```
+- `make test` - run application tests with pytest.
+- `make validate` - run tests, lint both charts, and render both charts.
+- `make deploy` - build the app image, prepare k3d, and deploy LGTM and the app with telemetry enabled.
+- `make simulate-traffic` - send normal, delayed, and deliberate 503 requests for the dashboard.
+- `make grafana` - port-forward Grafana to `localhost:3000`.
+- `make status` - show app and observability pods, services, and PVCs.
+- `make uninstall` - uninstall both releases and delete chart-owned observability PVCs.
+- `make k3d-delete` - delete the local k3d cluster.
 
-## Available targets
+Build, tool-check, chart-validation, and cluster-creation targets are internal
+dependencies and are omitted from `make help`.
 
-- `make venv` - create `.venv` if it does not exist.
-- `make install` - install Python dependencies from `requirements.txt`.
-- `make test` - run app tests with `pytest`.
-- `make run` - run the Flask app locally on `PORT=8080`.
-- `make docker-build` - build local image (`python-app:local` by default).
-- `make docker-run` - run the local image on `localhost:8080`.
-- `make k3d-create` - create the k3d cluster if missing.
-- `make k3d-import-image` - import the built image into the k3d cluster.
-- `make helm-lint` - lint the Helm chart.
-- `make helm-template` - render Helm templates locally.
-- `make helm-deploy` - deploy/upgrade the Helm release with Gateway API settings.
-- `make deploy-app` - full flow: build image -> create cluster -> import image -> lint -> deploy.
-- `make status` - show `pods`, `svc`, `gateway`, and `httproute` in namespace.
-- `make k3d-delete` - delete the k3d cluster.
-
-## Most common command sets
-
-### Local test and run (without docker)
+## Common workflow
 
 ```bash
-(Checkout to repository)
-make test
-make run
+make validate
+make deploy
+make grafana
+make simulate-traffic
 ```
 
-### Build and run Docker image
+Open [http://localhost:3000](http://localhost:3000) and sign in with the local
+default credentials `admin` / `admin`. Add `127.0.0.1 python-app.local` to
+`/etc/hosts` if needed. Traffic simulation requires the deployed application and
+Gateway route to be reachable; it sends a normal request, a 500 ms delayed request,
+and a deliberate 503 request per cycle. The simulated error log and server span share
+a trace ID, and the dashboard includes the corresponding failure logs.
+
+Synthetic endpoints are enabled by `helm/python-app/values-local-dev.yaml` and are
+disabled by the chart's default values.
+
+## Configuration
+
+Common Make variables can be overridden on the command line:
+
+- `IMAGE_REPO` (`python-app`), `IMAGE_TAG` (`latest`)
+- `K3D_CLUSTER` (`demo`), `K3D_PORT` (`8081:80`)
+- `APP_RELEASE` (`python-app`), `NAMESPACE` (`default`)
+- `OBS_RELEASE` (`lgtm`), `OBS_NAMESPACE` (`observability`)
+- `APP_HOST` (`python-app.local`), `APP_URL` (`http://python-app.local:8081`)
+- `SIMULATE_REQUESTS` (`5` cycles), `GRAFANA_PORT` (`3000`)
+
+For example:
 
 ```bash
-(Checkout to repository)
-make docker-build
-make docker-run
+make deploy OBS_RELEASE=lgtm-dev OBS_NAMESPACE=observability-dev
+make grafana OBS_NAMESPACE=observability-dev GRAFANA_PORT=3300
+make simulate-traffic SIMULATE_REQUESTS=10 APP_URL=http://python-app.local:8081
 ```
 
-### Deploy to k3d using Helm
+Each Helm chart is also independently deployable with `helm upgrade --install`.
+The app chart's default values disable telemetry; set `telemetry.enabled=true` and
+configure `telemetry.endpoint` when deploying it separately alongside a Collector.
+
+The stack is intended for local development: single-replica components use
+persistent volumes from the default StorageClass unless chart values override it.
+If the cluster has no dynamic default provisioner, configure storage classes in
+the chart values. Grafana and the backends are ClusterIP-only, with local-only
+default credentials; set `grafana.adminPassword` before using a shared cluster.
+
+## Teardown
+
+`make uninstall` removes both Helm releases and any remaining named observability
+PVCs. To remove the entire local Kubernetes environment as well, run:
 
 ```bash
-(Checkout to repository)
-make deploy-app
-make status
+make k3d-delete
 ```
-
-## Configurable variables
-
-You can override variables per command.
-
-- `IMAGE_REPO` (default: `python-app`)
-- `IMAGE_TAG` (default: `local`)
-- `K3D_CLUSTER` (default: `demo`)
-- `K3D_PORT` (default: `8081:80`)
-- `HELM_RELEASE` (default: `python-app`)
-- `HELM_CHART` (default: `helm/python-app`)
-- `NAMESPACE` (default: `default`)
-- `APP_HOST` (default: `python-app.local`)
-
-Examples:
-
-```bash
-(Checkout to repository)
-make docker-build IMAGE_REPO=my-python-app IMAGE_TAG=dev
-make k3d-create K3D_CLUSTER=dev-cluster K3D_PORT=8082:80
-make helm-deploy HELM_RELEASE=python-app-dev NAMESPACE=dev APP_HOST=python-app.dev.local
-make deploy-app IMAGE_REPO=my-python-app IMAGE_TAG=dev K3D_CLUSTER=dev-cluster APP_HOST=python-app.dev.local
-```
-
-## Notes
-
-- `make k3d-create` is idempotent; it skips creation when the cluster already exists.
-- `make helm-deploy` enables Gateway API resources by default through Helm `--values $(LOCAL_VALUES_FILE)` flag.
-- If name resolution does not work locally, add your host to `/etc/hosts` (for example: `127.0.0.1 python-app.local`).
-
